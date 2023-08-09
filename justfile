@@ -18,11 +18,14 @@ _dirs cmd:
 format:
   - just _files format
 
+check:
+  - dhall type --quiet --file ./kd/package.dhall
+
 package:
   - just _dirs package
   - just _files freeze
   - just _files lint
-  - dhall type --quiet --file ./kd/package.dhall
+  - just check
 
 apply:
   #!/usr/bin/env bash

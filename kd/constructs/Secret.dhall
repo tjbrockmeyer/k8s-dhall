@@ -1,6 +1,8 @@
-let List/all = ../ext/Prelude/List/map.dhall
+let List/all = ../ext/Prelude/List/all.dhall
 
-let Map = ../ext/Prelude/List/map.dhall
+let List/map = ../ext/Prelude/List/map.dhall
+
+let Map = ../ext/Prelude/Map/Type.dhall
 
 let Optional/default = ../ext/Prelude/Optional/default.dhall
 

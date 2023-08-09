@@ -14,7 +14,7 @@ let Config =
           , ports : List Natural
           , env : Map Text Env
           }
-      , default = { ports = [] : List Port, env = [] : Map Text Env }
+      , default = { ports = [] : List Natural, env = [] : Map Text Env }
       }
 
 let new =
