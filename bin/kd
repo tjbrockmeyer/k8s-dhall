@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+kdDir="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )/../kd" &> /dev/null && pwd )"
+
+action=$1
+env=$2
+shift; shift
+resources="$@"
+
+set -e
+specsFile=./.deploy/specs.dhall
+getKeysFile="$kdDir/cli/getKeys.dhall"
+
+
+usage() {
+    local error="$1"
+    echo "usage: kd <action> <env> [resources...]" >&2
+    echo "  action    = apply|delete        - choose a kubectl action to perform" >&2
+    echo "  env       = dev|prod            - chooses the deployment environment, and the config file to use from the .deploy directory" >&2
+    echo "  resources = *string*... (*all*) - chooses the resources in $specsFile to take action on" >&2
+    echo "environment variables are passed on to the dhall parser" >&2
+    if [[ -n "$error" ]]; then echo "error: $error" >&2; fi
+    exit 1
+}
+
+# handle action
+if [[ $action != apply ]] && [[ $action != delete ]]; then
+    usage "action must be one of apply|delete"
+fi
+
+# handle env
+if [[ $env = prod ]]; then
+    envFile=./.deploy/env/prod.dhall
+elif [[ $env = dev ]]; then
+    envFile=./.deploy/env/dev.dhall
+else
+    usage "env must be one of dev|prod"
+fi
+
+# perform action
+if [[ ! -f $specsFile ]]; then
+    usage "specs file is missing at $specsFile"
+fi
+specs="$(ENV_FILE=$envFile dhall --file $specsFile | dhall-to-json)"
+for key in ${resources:-$(jq -r 'keys | join(" ")' <<<"$specs")}; do
+    keyData="$(jq -c ".$key" <<<"$specs")"
+    if [[ $(jq -r '.apiVersion' <<<"$keyData") = null ]]; then
+        for object in $(jq -c '.[]' <<<"$keyData"); do
+            kubectl -n $env $action -f - <<<"$object"
+        done
+    else
+        kubectl -n $env $action -f - <<<"$keyData"
+    fi
+done
