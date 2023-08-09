@@ -9,7 +9,7 @@ _files cmd:
 
 _dirs cmd:
   #!/usr/bin/env bash
-  for d in $(find ./kd -type d); do
+  for d in $(find ./kd -type d | tail -n +2); do
     if [[ -n "$d"/*.dhall ]]; then
       dhall {{cmd}} "$d"
     fi
