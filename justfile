@@ -15,15 +15,23 @@ _dirs cmd:
     fi
   done
 
+freeze:
+  #!/usr/bin/env bash
+  for file in $(find ./kd/ -type f -name '*.dhall'); do
+    if ! dhall freeze --check $file &>/dev/null
+    then dhall freeze $file
+    fi
+  done
+
 format:
   - just _files format
 
 check:
-  - dhall type --quiet --file ./kd/package.dhall
+  - dhall --explain type --quiet --file ./kd/package.dhall
 
 package:
   - just _dirs package
-  - just _files freeze
+  - just freeze
   - just _files lint
   - just check
 
