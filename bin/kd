@@ -41,7 +41,7 @@ fi
 if [[ ! -f $specsFile ]]; then
     usage "specs file is missing at $specsFile"
 fi
-specs="$(ENV_FILE=$envFile dhall --file $specsFile | dhall-to-json)"
+specs="$(ENV_FILE=$envFile dhall-to-json --compact --file $specsFile)"
 for key in ${resources:-$(jq -r 'keys | join(" ")' <<<"$specs")}; do
     keyData="$(jq -c ".$key" <<<"$specs")"
     if [[ $(jq -r '.apiVersion' <<<"$keyData") = null ]]; then

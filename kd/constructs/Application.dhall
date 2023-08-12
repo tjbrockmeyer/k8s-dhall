@@ -1,5 +1,7 @@
 let Map = ../ext/Prelude/Map/Type.dhall
 
+let Map/Entry = ../ext/Prelude/Map/Entry.dhall
+
 let Env = ../utils/Env.dhall
 
 let Service = ./Service.dhall
@@ -16,8 +18,6 @@ let k8s/Ingress = ../ext/k8s/Ingress.dhall
 
 let Ingress = ./Ingress.dhall
 
-let Host = { name : Text, certSecret : Text, port : Natural }
-
 let Config =
       { Type =
           { name : Text
@@ -25,12 +25,12 @@ let Config =
           , image : Text
           , env : Map Text Env
           , ports : List Natural
-          , hosts : List Host
+          , hosts : Map Text Natural
           }
       , default =
         { ports = [] : List Natural
         , env = [] : Map Text Env
-        , hosts = [] : List Host
+        , hosts = [] : Map Text Natural
         }
       }
 
@@ -46,7 +46,8 @@ let new =
               , env = config.env
               }
         , service =
-            if    List/null Natural config.ports && List/null Host config.hosts
+            if        List/null Natural config.ports
+                  &&  List/null (Map/Entry Text Natural) config.hosts
             then  None k8s/Service.Type
             else  Some
                     ( Service.new
@@ -55,14 +56,14 @@ let new =
                         , ports =
                               config.ports
                             # List/map
-                                Host
+                                (Map/Entry Text Natural)
                                 Natural
-                                (\(host : Host) -> host.port)
+                                (\(e : Map/Entry Text Natural) -> e.mapValue)
                                 config.hosts
                         }
                     )
         , ingress =
-            if    List/null Host config.hosts
+            if    List/null (Map/Entry Text Natural) config.hosts
             then  None k8s/Ingress.Type
             else  Some
                     ( Ingress.new
@@ -70,12 +71,11 @@ let new =
                         , name = config.name
                         , rules =
                             List/map
-                              Host
+                              (Map/Entry Text Natural)
                               Ingress.Rule
-                              ( \(host : Host) ->
-                                  { host = host.name
-                                  , port = host.port
-                                  , certSecret = host.certSecret
+                              ( \(e : Map/Entry Text Natural) ->
+                                  { host = e.mapKey
+                                  , port = e.mapValue
                                   , serviceName = config.name
                                   }
                               )

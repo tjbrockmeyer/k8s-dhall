@@ -22,8 +22,9 @@ let List/map = ../ext/Prelude/List/map.dhall
 
 let Map = ../ext/Prelude/Map/Type.dhall
 
-let Rule =
-      { host : Text, certSecret : Text, serviceName : Text, port : Natural }
+let certIssuer = "letsencrypt-staging"
+
+let Rule = { host : Text, serviceName : Text, port : Natural }
 
 let Config = { Type = { name : Text, rules : List Rule }, default = {=} }
 
@@ -35,9 +36,10 @@ let new =
         , metadata = k8s/ObjectMeta::{
           , name = Some config.name
           , labels = Some (toMap { app = config.name })
-          , annotations = Some (toMap {=} : Map Text Text)
+          , annotations = Some (toMap { `cert-manager.io/issuer` = certIssuer })
           }
         , spec = Some k8s/IngressSpec::{
+          , ingressClassName = Some "nginx"
           , rules = Some
               ( List/map
                   Rule
@@ -49,6 +51,7 @@ let new =
                         , paths =
                           [ k8s/HTTPIngressPath::{
                             , pathType = "Prefix"
+                            , path = Some "/"
                             , backend = k8s/IngressBackend::{
                               , service = Some k8s/IngressServiceBackend::{
                                 , name = rule.serviceName
@@ -70,7 +73,7 @@ let new =
                   k8s/IngressTLS.Type
                   ( \(rule : Rule) ->
                       { hosts = Some [ rule.host ]
-                      , secretName = Some rule.certSecret
+                      , secretName = Some (config.name ++ "-cert")
                       }
                   )
                   config.rules

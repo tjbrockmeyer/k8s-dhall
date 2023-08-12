@@ -24,7 +24,10 @@ freeze:
   done
 
 format:
-  - just _files format
+  #!/usr/bin/env bash
+  for file in $(find ./ -type f -name '*.dhall'); do
+      dhall format $file
+  done
 
 check:
   - dhall --explain type --quiet --file ./kd/package.dhall
@@ -35,15 +38,21 @@ package:
   - just _files lint
   - just check
 
-apply:
+kube action files:
   #!/usr/bin/env bash
   set -ex
-  files="ns"
+  files="{{files}}"
   # check files validities
   for file in $files; do
-      dhall --file "./cluster/$file.dhall" >/dev/null
+    if [[ -f ./cluster/$file.dhall ]]
+    then dhall --file ./cluster/$file.dhall >/dev/null
+    fi
   done
   # apply all files
   for file in $files; do
-      kubectl apply -f - <<< "$( dhall --file "./cluster/$file.dhall" | dhall-to-yaml --documents )"
+    if [[ -f ./cluster/$file.dhall ]]
+    then kubectl {{action}} -f - <<< "$( dhall-to-yaml --documents --file "./cluster/$file.dhall" )"
+    elif [[ -f ./cluster/$file.uri ]]
+    then kubectl {{action}} -f $(cat ./cluster/$file.uri)
+    fi
   done
